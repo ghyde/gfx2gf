@@ -19,16 +19,21 @@ To install these packages via [Homebrew][4]:
 Usage
 -----
 
-    gfx2gf.sh [-o directory] file...
+    gfx2gf.sh [-f] [-o directory] [-v] file...
 
 `gfx2gf.sh` can take multiple input graphic files. For each file,
-the script will make a host directory of the same name inside the
+the script will make an output directory of the same name inside the
 input file's parent directory. The script will then generate Game
-Frame files into the host directory.
+Frame files inside the output directory.
 
-The `-o` option will direct the script to create the host
+The `-f` option will force the script to overwrite any existing
+output folders.
+
+The `-o` option will direct the script to create the output
 directory in the given location instead of an input file's parent
 directory.
+
+The `-v` option enables verbose mode.
 
 
   [1]: http://ledseq.com/forums/topic/graphic-conversion-tool-gfx2gf/#post-1220
