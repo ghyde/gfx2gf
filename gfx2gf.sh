@@ -2,7 +2,7 @@
 
 ###########################################################################
 #                                                                         #
-# gfx2gf.sh v1.1 (20140912)                                               #
+# gfx2gf.sh v1.1.1 (20140913)                                             #
 # by Garrett Hyde                                                         #
 #                                                                         #
 # This bash script is based upon Jeremy Williams Window's batch file.     #
@@ -13,6 +13,12 @@
 
 USAGE="$0 [-f] [-o $(tput smul)directory$(tput rmul)] [-v] $(tput smul)file$(tput rmul)..."
 
+# Check if FFmpeg is installed
+if ! type ffmpeg > /dev/null; then
+    echo "You need to install FFmpeg first!" >&2
+    exit 1
+fi
+
 # Check if ImageMagick is installed
 if ! type convert > /dev/null; then
     echo "You need to install ImageMagick first!" >&2
@@ -21,7 +27,7 @@ fi
 
 # Check if Ghostscript is installed
 if ! type gs > /dev/null; then
-    echo "You need to install Ghostscript first! (Required in order to run \`convert\`)" >&2
+    echo "You need to install Ghostscript first!" >&2
     exit 1
 fi
 

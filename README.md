@@ -9,12 +9,16 @@ work on Linux.
 
 Dependencies
 ------------
-[ImageMagick][2] is required in order for this script to run. You also
-might need to install [Ghostscript][3] in order for `convert` to run.
+You must have the following packages installed in order to run this
+script:
 
-To install these packages via [Homebrew][4]:
+ - [FFmpeg][2]
+ - [ImageMagick][3]
+ - [Ghostscript][4]
 
-    brew install imagemagick ghostscript
+To install these packages via [Homebrew][5]:
+
+    brew install ffmpeg imagemagick ghostscript
 
 Usage
 -----
@@ -37,6 +41,7 @@ The `-v` option enables verbose mode.
 
 
   [1]: http://ledseq.com/forums/topic/graphic-conversion-tool-gfx2gf/#post-1220
-  [2]: http://www.imagemagick.org/
-  [3]: http://www.ghostscript.com/
-  [4]: http://brew.sh/
+  [2]: https://www.ffmpeg.org/
+  [3]: http://www.imagemagick.org/
+  [4]: http://www.ghostscript.com/
+  [5]: http://brew.sh/
