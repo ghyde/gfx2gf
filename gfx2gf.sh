@@ -2,7 +2,7 @@
 
 ###########################################################################
 #                                                                         #
-# gfx2gf.sh v1.1.1 (20140913)                                             #
+# gfx2gf.sh v1.1.2 (20141010)                                             #
 # by Garrett Hyde                                                         #
 #                                                                         #
 # This bash script is based upon Jeremy Williams Window's batch file.     #
@@ -11,7 +11,7 @@
 #                                                                         #
 ###########################################################################
 
-USAGE="$0 [-f] [-o $(tput smul)directory$(tput rmul)] [-v] $(tput smul)file$(tput rmul)..."
+USAGE="$0 [-f] [-h] [-o $(tput smul)directory$(tput rmul)] [-v] $(tput smul)file$(tput rmul)..."
 
 # Check if FFmpeg is installed
 if ! type ffmpeg > /dev/null; then
@@ -41,10 +41,14 @@ fi
 base_output=""
 force=0
 verbose=0
-while getopts ":o:fv" opt; do
+while getopts ":fho:v" opt; do
     case $opt in
         f)
             force=1
+            ;;
+        h)
+            echo $USAGE
+            exit 0
             ;;
         o)
             base_output="$OPTARG"
@@ -100,7 +104,7 @@ for input_path in "$@"; do
     width=$(echo "$file_info" | awk '{print $2}')
     delay=$(echo "$file_info" | awk '{print $3}')
 
-    # Convert to graphic into BMP files
+    # Convert graphic into BMP files
     if [ "$verbose" -eq 1 ]; then
         echo "Converting \"$input_file\" to Game Frame format..."
         echo "-----"
