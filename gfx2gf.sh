@@ -149,7 +149,7 @@ for input_path in "$@"; do
         if [ "$delay" -lt 4 ]; then
             delay=4
         fi
-        delay=$(($delay * 4))
+        delay=$(($delay * 10))
 
         # Write config.ini using stored delay value
         echo "# All of these settings are optional. 
