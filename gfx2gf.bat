@@ -1,19 +1,28 @@
 @echo off
-:: gfx2gf.bat v1.5 (20140823)
+:: gfx2gf.bat v1.8 (20161104)
 :: by Jeremy Williams
 ::
 :: This batch file converts graphics for Game Frame compatibility (www.ledseq.com).
 :: *** You must have ImageMagick installed for it to run (www.imagemagick.org) ***
 :: Passed graphic files will be stretched, resized, & resampled if larger than 16x16. If
-:: the file is an animated GIF, a filmstrip graphic will be generated along with 
+:: the file is an animated GIF, a filmstrip graphic will be generated along with
 :: a CONFIG.INI using a "hold" value (framerate) equal to the first frame of the
 :: animation. Usually this works well, but you may still need to adjust the hold
 :: value if the animation plays too slow/fast.
 
 :: simple check for ImageMagick installation
-convert > nul
+magick convert > nul
 if %ERRORLEVEL%==9009 GOTO NOMAGICK
 if "%~1" == "" GOTO NOFILE
+
+:: ask good questions
+choice /M "Use Nearest Neighbor Resize? (Good for shrinking pixel art)"
+if ERRORLEVEL 1 SET SCALETYPE=neighbor
+if ERRORLEVEL 2 SET SCALETYPE=resampled
+
+choice /M "Crop edges? (Make square before resize)"
+if ERRORLEVEL 1 SET CROPTYPE=crop
+if ERRORLEVEL 2 SET CROPTYPE=noCrop
 
 :: make folders
 set GRAPHIC=%~f1
@@ -21,16 +30,24 @@ set FOLDER=%~n1
 mkdir "%FOLDER%"
 mkdir "%FOLDER%\temp"
 
-:: store source resolution (not necessary?)
-set WIDTH=0
-set HEIGHT=0
-for /f "tokens=*" %%w in ('identify -format "%%w" "%GRAPHIC%[0]"') do set WIDTH=%%w
-for /f "tokens=*" %%h in ('identify -format "%%h" "%GRAPHIC%[0]"') do set HEIGHT=%%h
-
 :: convert to BMP and extract animated GIF into seperate files
 echo Converting "%~nx1" to Game Frame format...
 echo -----
-ffmpeg -an -r 1 -i "%GRAPHIC%" -r 1 -f image2 -pix_fmt bgr24 -s 16x16 "%FOLDER%\temp\%%06d.bmp"
+if "%SCALETYPE%" == "neighbor" (
+	:: Nearest Neighbor Scaling
+	if "%CROPTYPE%" == "crop" (
+		ffmpeg -an -r 1 -i "%GRAPHIC%" -r 1 -f image2 -pix_fmt bgr24 -sws_flags neighbor -vf "scale=-1:16,crop=16:16" "%FOLDER%\temp\%%06d.bmp"
+	) else (
+		ffmpeg -an -r 1 -i "%GRAPHIC%" -r 1 -f image2 -pix_fmt bgr24 -sws_flags neighbor -s 16x16 "%FOLDER%\temp\%%06d.bmp"
+	)
+) else (
+	:: Resampled Scaling
+	if "%CROPTYPE%" == "crop" (
+		ffmpeg -an -r 1 -i "%GRAPHIC%" -r 1 -f image2 -pix_fmt bgr24 -vf "scale=-1:16,crop=16:16" "%FOLDER%\temp\%%06d.bmp"
+	) else (
+		ffmpeg -an -r 1 -i "%GRAPHIC%" -r 1 -f image2 -pix_fmt bgr24 -s 16x16 "%FOLDER%\temp\%%06d.bmp"
+	)
+)
 echo -----
 :: count the number of frames
 set SCENES=0
@@ -44,25 +61,23 @@ if %SCENES% GTR 1999 (
 	set NESTED=0
 	)
 
-if %SCENES% == 1 (
-	montage "%FOLDER%\temp\*.bmp" -mode concatenate -tile 1x -type truecolor "%FOLDER%\0.bmp"
-	echo Graphic conversion finished!
-	goto MAKEPREVIEW
-	)
-
 :FILMSTRIP
 
 :: combine multiple files into one long filmstrip
 echo Creating filmstrip...
-montage "%FOLDER%\temp\*.bmp" -mode concatenate -tile 1x -type truecolor "%FOLDER%\0.bmp"
+magick montage "%FOLDER%\temp\*.bmp" -mode concatenate -tile 1x -type truecolor "%FOLDER%\0.bmp"
 echo Filmstrip conversion finished!
 
 :: store the delay used for the first frame of animation in the animated GIF
 set HOLD=0
-for /f "tokens=*" %%a in ('identify -format "%%T" "%GRAPHIC%[0]"') do set HOLD=%%a
-:: GF frame rate bottoms out around 40
-if %HOLD% LSS 4 (set HOLD=4)
-set /A HOLD = HOLD * 10
+for /f "tokens=*" %%a in ('magick identify -format "%%T" "%GRAPHIC%[0]"') do set HOLD=%%a
+:: if no frame rate, assume video (~24 fps)
+if %HOLD% EQU 0 (
+	set HOLD=41
+	echo Not animated GIF or no frame rate detected; assuming 24fps video.
+	) else (
+	set /A HOLD = HOLD * 10
+	)
 
 if %SCENES% == 1 (GOTO NOTANIMATED)
 if %SCENES% gtr 1 (echo hold value: %HOLD%)
@@ -71,7 +86,7 @@ GOTO MAKEINI
 :BUILDNEST
 
 echo Long video detected; nesting folders.
-convert -crop 16x32000x0x0 "%FOLDER%\0.bmp" "%FOLDER%\%%01d.bmp"
+magick convert -crop 16x32000x0x0 "%FOLDER%\0.bmp" "%FOLDER%\%%01d.bmp"
 set STRIPS=0
 for %%x in ("%FOLDER%\*.bmp") do set /a STRIPS+=1
 echo %STRIPS% filmstrips created.
@@ -79,7 +94,7 @@ set CURRENTNEST=0
 
 :ITERATE
 if %CURRENTNEST% LSS %STRIPS% (
-	echo Making nested folder %CURRENTNEST% 
+	echo Making nested folder %CURRENTNEST%
 	mkdir "%FOLDER%\%CURRENTNEST%"
 	move "%FOLDER%\%CURRENTNEST%.bmp" "%FOLDER%\%CURRENTNEST%\0.bmp"
 	copy "%FOLDER%\config.ini" "%FOLDER%\%CURRENTNEST%"
@@ -87,7 +102,7 @@ if %CURRENTNEST% LSS %STRIPS% (
 	goto ITERATE
 	)
 
-del /Q "%FOLDER%\config.ini"
+::del /Q "%FOLDER%\config.ini"
 echo Nesting folders complete.
 goto END
 
@@ -97,8 +112,8 @@ cd %folder%
 
 :: write config.ini using stored delay value
 echo # All of these settings are optional. >> config.ini
-echo # If this file doesn’t exist, or if >> config.ini
-echo # settings don’t appear in this file, >> config.ini
+echo # If this file doesn't exist, or if >> config.ini
+echo # settings don't appear in this file, >> config.ini
 echo # Game Frame will use default values. >> config.ini
 echo. >> config.ini
 echo [animation] >> config.ini
@@ -110,7 +125,20 @@ echo. >> config.ini
 echo # should the animation loop? If false, >> config.ini
 echo # system will progress to next folder >> config.ini
 echo # after the last frame is displayed. >> config.ini
-echo loop = true >> config.ini
+if %NESTED% == 0 (
+	echo loop = true >> config.ini
+	) else (
+	echo loop = false >> config.ini
+	)
+echo. >> config.ini
+echo # should the animation always play >> config.ini
+echo # to completion regardless of the >> config.ini
+echo # system duration setting? >> config.ini
+if %NESTED% == 0 (
+	echo finish = false >> config.ini
+	) else (
+	echo finish = true >> config.ini
+	)
 echo. >> config.ini
 echo [translate] >> config.ini
 echo. >> config.ini
@@ -142,15 +170,15 @@ GOTO MAKEPREVIEW
 :MAKEPREVIEW
 echo Generating preview...
 if %SCENES% LEQ 1 (
-	convert -filter box -resize 128x128 "%FOLDER%\temp\*.bmp" "%FOLDER%\%FOLDER%_preview.gif"
+	magick convert -filter box -resize 128x128 "%FOLDER%\temp\*.bmp" "%FOLDER%\%FOLDER%_preview.gif"
 	echo Done!
 	goto CLEANUP
 	)
 set /A DELAY=%HOLD%/10
-if %SCENES% GEQ 2 (if %SCENES% leq 250 (convert -delay %DELAY% -filter box -resize 128x128 "%FOLDER%\temp\*.bmp" "%FOLDER%\%FOLDER%_preview.gif"))
+if %SCENES% GEQ 2 (if %SCENES% leq 250 (magick convert -delay %DELAY% -filter box -resize 128x128 "%FOLDER%\temp\*.bmp" "%FOLDER%\%FOLDER%_preview.gif"))
 :: only use the first 250 frames
 if %SCENES% GTR 250 (echo Long animation; only previewing the first 250 frames...)
-if %SCENES% GTR 250 (convert -delay %DELAY% -filter box -resize 128x128 "%FOLDER%\temp\%%06d.bmp[1-250]" "%FOLDER%\%FOLDER%_preview.gif")
+if %SCENES% GTR 250 (magick convert -delay %DELAY% -filter box -resize 128x128 "%FOLDER%\temp\%%06d.bmp[1-250]" "%FOLDER%\%FOLDER%_preview.gif")
 
 :CLEANUP
 rmdir /s /q "%FOLDER%\temp"
@@ -160,7 +188,7 @@ goto END
 :: exits
 :NOMAGICK
 echo.
-echo This program requires ImageMagick (www.imagemagick.org) 
+echo This program requires ImageMagick (www.imagemagick.org)
 echo to be installed on the system. Make it so.
 goto END
 :NOTANIMATED
@@ -170,7 +198,7 @@ goto MAKEPREVIEW
 echo ERROR: File not found! (Did you type the file extension?)
 goto NOFILE
 :NOFILE
-echo Need input! Drag a graphic onto the .bat file, 
+echo Need input! Drag a graphic onto the .bat file,
 echo or run it from a command prompt as:
 echo.
 echo gfx2gf yourfile.gif
