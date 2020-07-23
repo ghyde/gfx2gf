@@ -11,7 +11,7 @@
 #                                                                         #
 ###########################################################################
 
-USAGE="$0 [-f] [-h] [-o $(tput smul)directory$(tput rmul)] [-v] $(tput smul)file$(tput rmul)..."
+USAGE="$0 [-f] [-h] [-n] [-o $(tput smul)directory$(tput rmul)] [-v] $(tput smul)file$(tput rmul)..."
 
 # Check if FFmpeg is installed
 if ! type ffmpeg > /dev/null; then
@@ -41,7 +41,8 @@ fi
 base_output=""
 force=0
 verbose=0
-while getopts ":fho:v" opt; do
+nearest_neighbor=0
+while getopts ":fnho:v" opt; do
     case $opt in
         f)
             force=1
@@ -55,6 +56,9 @@ while getopts ":fho:v" opt; do
             ;;
         v)
             verbose=1
+            ;;
+        n)
+            nearest_neighbor=1
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
@@ -110,7 +114,7 @@ for input_path in "$@"; do
         echo "-----"
     fi
     ffmpeg $(if [ "$verbose" -eq 0 ]; then echo "-loglevel error"; fi) \
-        -an -r 1 -i "$input_path" -r 1 -f image2 -pix_fmt bgr24 -s 16x16 \
+        -an -r 1 -i "$input_path" -r 1 -f image2 -pix_fmt bgr24 -s 16x16 $(if [ "$nearest_neighbor" -ne 0 ]; then echo "-sws_flags neighbor"; fi) \
         "$output_path/frame_%06d.bmp"
     if [ "$verbose" -eq 1 ]; then
         echo "-----"
