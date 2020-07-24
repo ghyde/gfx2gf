@@ -23,7 +23,7 @@ To install these packages via [Homebrew][5]:
 Usage
 -----
 
-    gfx2gf.sh [-f] [-h] [-o directory] [-v] file...
+    gfx2gf.sh [-f] [-h] [-n] [-o directory] [-v] file...
 
 `gfx2gf.sh` can take multiple input graphic files. For each file,
 the script will make an output directory of the same name inside the
@@ -34,6 +34,8 @@ The `-f` option will force the script to overwrite any existing
 output folders.
 
 The `-h` option will print out the usage for gfx2gf.sh.
+
+The `-n` option will use nearest neighbor when scaling the images
 
 The `-o` option will direct the script to create output directories
 in the given location instead of an input file's parent directory.
